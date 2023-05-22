@@ -9,6 +9,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.preprocessing import StandardScaler
 from keras.layers import TimeDistributed, Dense
 from keras.utils.vis_utils import plot_model
+import copy
 
 #last_year = str(datetime.datetime.now().year-1) + "-" + str(datetime.datetime.now().month) + "-" + str(datetime.datetime.now().day)
 #today = str(datetime.datetime.now().year) + "-" + str(datetime.datetime.now().month) + "-" + str(datetime.datetime.now().day)
@@ -40,7 +41,7 @@ def create_sequences(data, seq_length):
     y = []
     for i in range(len(data)-seq_length):
         X.append(data[i:i+seq_length, :])
-        y.append(data[i+seq_length, 0]) # wyjście - pierwsza kolumna danych
+        y.append(data[i+seq_length, :]) # wyjście - pierwsza kolumna danych
     return np.array(X), np.array(y)
 
 seq_length = 100 # długość sekwencji
@@ -57,6 +58,8 @@ print(y_val.shape)
 print(X_test.shape)
 print(y_test.shape)
 
+print(y_test[:,0])
+
 input_tensor = output_tensor = Input(X_train.shape[1:])
 output_tensor = TimeDistributed(Dense(32, activation = 'selu'))(output_tensor)
 output_tensor = TimeDistributed(Dense(32, activation = 'selu'))(output_tensor)
@@ -68,29 +71,98 @@ model.compile(optimizer='RMSProp', loss='MeanSquaredError')
 
 plot_model(model)
 print(model.summary())
-model.fit(x = X_train, y = y_train, batch_size=32, epochs=20, validation_data=(X_val, y_val))
 
+print(y_train[:,0].shape)
 
-y_pred = model.predict(X_test)
+open_model = copy.deepcopy(model)
+high_model =  copy.deepcopy(model)
+low_model = copy.deepcopy(model)
+close_model = copy.deepcopy(model)
+adj_model = copy.deepcopy(model)
+volume_model = copy.deepcopy(model)
+
+open_model.fit(x = X_train, y = y_train[:,0], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,0]))
+high_model.fit(x = X_train, y = y_train[:,1], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,1]))
+low_model.fit(x = X_train, y = y_train[:,2], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,2]))
+close_model.fit(x = X_train, y = y_train[:,3], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,3]))
+adj_model.fit(x = X_train, y = y_train[:,4], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,4]))
+volume_model.fit(x = X_train, y = y_train[:,5], batch_size=32, epochs=20, validation_data=(X_val, y_val[:,5]))
+
+'''
+
+y_pred = open_model.predict(X_test)
+
+y_pred = scaler.inverse_transform(y_pred)
+y_test = scaler.inverse_transform(y_test)
 
 x = np.arange(y_pred.shape[0])
 plt.figure(1)
 plt.subplot(211)
 plt.plot(x, y_pred, label = 'Predykcje')
-plt.plot(x, y_test, label = 'Wartości prawdziwe')
+plt.plot(x, y_test[:,0], label = 'Wartości prawdziwe')
 plt.legend()
-diff = y_pred.squeeze()-y_test
+diff = y_pred.squeeze()-y_test[:,0]
 plt.subplot(212)
 plt.plot(x, diff, label = 'różnice')
 plt.legend()
 
 diff_pred = np.diff(y_pred.squeeze())
-diff_true = np.diff(y_test)
+diff_true = np.diff(y_test[:,0])
 diff_pred = np.sign(diff_pred)
 diff_true = np.sign(diff_true)
 print(confusion_matrix(diff_true, diff_pred))
 print(accuracy_score(diff_true, diff_pred))
 
-to_predict = scaler.transform(data[-100:])
+to_predict = scaler.transform(data[-101:-1])
 to_predict = to_predict.reshape((1,)+to_predict.shape)
-predict = model.predict(to_predict)
+predict_o = open_model.predict(to_predict)
+predict_h = high_model.predict(to_predict)
+predict_l = low_model.predict(to_predict)
+predict_c = close_model.predict(to_predict)
+#predict_a = adj_model.predict(to_predict)
+#predict_v = volume_model.predict(to_predict)
+'''
+
+
+to_predict = scaler.transform(data[-101:-1])
+to_predict = to_predict.reshape((1,)+to_predict.shape)
+predict_o = open_model.predict(to_predict)
+predict_h = high_model.predict(to_predict)
+predict_l = low_model.predict(to_predict)
+predict_c = close_model.predict(to_predict)
+predict_a = adj_model.predict(to_predict)
+predict_v = volume_model.predict(to_predict)
+
+p=np.array([predict_o,predict_h,predict_l,predict_c,predict_a,predict_v])
+print(p.shape)
+
+
+p = p.reshape((1,6))
+
+p2 = scaler.inverse_transform(p)
+y_test2 = scaler.inverse_transform(y_test)
+
+'''
+y_pred = volume_model.predict(X_test)
+
+
+#y_pred = scaler.inverse_transform(y_pred)
+#y_test = scaler.inverse_transform(y_test)
+
+x = np.arange(y_pred.shape[0])
+plt.figure(1)
+plt.subplot(211)
+plt.plot(x, y_pred, label = 'Predykcje')
+plt.plot(x, y_test[:,5], label = 'Wartości prawdziwe')
+plt.legend()
+diff = y_pred.squeeze()-y_test[:,5]
+plt.subplot(212)
+plt.plot(x, diff, label = 'różnice')
+plt.legend()
+
+diff_pred = np.diff(y_pred.squeeze())
+diff_true = np.diff(y_test[:,5])
+diff_pred = np.sign(diff_pred)
+diff_true = np.sign(diff_true)
+print(confusion_matrix(diff_true, diff_pred))
+print(accuracy_score(diff_true, diff_pred))'''
