@@ -115,14 +115,18 @@ predict_data = np.array(data[:])
 for i in range(5):
     to_predict = scaler.transform(predict_data[-100:])
     to_predict = to_predict.reshape((1,)+to_predict.shape)
-    predict_o = open_model.predict(to_predict)
-    predict_h = high_model.predict(to_predict)
-    predict_l = low_model.predict(to_predict)
-    predict_c = close_model.predict(to_predict)
-    predict_a = adj_model.predict(to_predict)
-    predict_v = volume_model.predict(to_predict)
     
-    p=np.array([predict_o,predict_h,predict_l,predict_c,predict_a,predict_v])
+    predict_list = []
+    for j in range(len(model_list)):
+        predict_list.append(model_list[i].predict(to_predict))
+        # predict_o = open_model.predict(to_predict)
+        # predict_h = high_model.predict(to_predict)
+        # predict_l = low_model.predict(to_predict)
+        # predict_c = close_model.predict(to_predict)
+        # predict_a = adj_model.predict(to_predict)
+        # predict_v = volume_model.predict(to_predict)
+    
+    p=np.array(predict_list)
 
     p = p.reshape((1,6))
 
