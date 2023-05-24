@@ -50,15 +50,6 @@ X_train, y_train = create_sequences(train_data_norm, seq_length)
 X_val, y_val = create_sequences(scaler.transform(val_data), seq_length)
 X_test, y_test = create_sequences(scaler.transform(test_data), seq_length)
 
-
-# print(X_train.shape)
-# print(y_train.shape)
-# print(X_val.shape)
-# print(y_val.shape)
-# print(X_test.shape)
-# print(y_test.shape)
-
-
 input_tensor = output_tensor = Input(X_train.shape[1:])
 output_tensor = TimeDistributed(Dense(32, activation = 'selu'))(output_tensor)
 output_tensor = TimeDistributed(Dense(32, activation = 'selu'))(output_tensor)
@@ -109,10 +100,11 @@ for i in range(len(model_list)):
 print(acc_list)
 
 
-#przewidywanie cen dla następnego tygodnia
+#przewidywanie cen 
+predict_n_days = 5 #iloć dni
 predict_data = np.array(data[:])
 
-for i in range(5):
+for i in range(predict_n_days):
     to_predict = scaler.transform(predict_data[-100:])
     to_predict = to_predict.reshape((1,)+to_predict.shape)
     
@@ -128,17 +120,25 @@ for i in range(5):
     
     p=np.array(predict_list)
 
-    p = p.reshape((1,6))
+    p = p.reshape((1,len(model_list)))
 
     p2 = scaler.inverse_transform(p)
     predict_data = np.append(predict_data,p2,axis=0)
     
 
+date = np.array(oil.index)
+for i in range(predict_n_days):
+    date = np.append(date, date[len(date)-6]++np.timedelta64(7,'D'))
+
+pd_predict_data = pd.DataFrame(predict_data, columns = ['Open','High','Low','Close','Adj Close','Volume'])
+pd_predict_data.index = date
+
+pd_predict_data.to_csv("oil_price.csv")
 
 for i in range(len(model_list)):
-    x = range(len(predict_data[-30:,i]))
+    #x = range(len(predict_data[-30:,i]))
     plt.figure(i)
-    plt.plot(x, predict_data[-30:,i], label = 'Predykcja '+str(i))
+    plt.plot(date[-30:], predict_data[-30:,i], label = 'Predykcja '+str(i))
     plt.legend()
 '''
 y_pred = volume_model.predict(X_test)
